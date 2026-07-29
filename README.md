@@ -5,6 +5,8 @@ Most of these are based on my own personal stock trading information. One is bas
 
 Since many managers and people in HR/recruiters don't have Power BI access and since one cannot get an online Power BI Service account without a business email, I did these on Power BI Desktop and then added in screenshots of the model and some DAX for your reference and put them into easy-to-open PDFs. I can share the BI files if you show interest in my job applications, but I do not want to plaster my personal information all over the internet! I will screenshot some SQL to show you that part of many of these models.
 
+**When you open the PDF YOU MIGHT NEED TO CLICK MORE PAGES AT THE BOTTOM TO SEE THE REST**
+
 Enjoy!
 
 
