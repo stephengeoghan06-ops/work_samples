@@ -1,11 +1,11 @@
 # 💫 About Me:
-I'm Steve from NYC. Adding Power BI work samples based on SQL/Excel data I wrote/compiled, to supplement job applications for positions requiring advanced Power-Bi skills. I passed the PL-300 exam so am certified by Microsoft in Power BI.
+I'm Steve from NYC. This is a collection of Power BI Desktop work samples based on SQL/Excel data I wrote/compiled, to supplement job applications for positions requiring advanced Power-BI skills. I passed the PL-300 exam so am certified by Microsoft in Power BI.
 
 Most of these are based on my own personal stock trading information. One is based on public forest/geographic information, and one is based on fictitious financials I made up, to show a work sample that is Dax/financial information heavy. 
 
-Since many managers and people in HR/recruiters don't have Power BI access and since one cannot get an online Power BI Service account without a business email, I did these on Power BI Desktop and then added in screenshots of the model and some DAX for your reference and put them into easy-to-open PDFs. I can share the BI files if you show interest in my job applications, but I do not want to plaster my personal information all over the internet! I will screenshot some SQL to show you that part of many of these models.
+Since many managers and people in HR/recruiters don't have Power BI access and since one cannot get an online Power BI Service account without a business email, I did these on Power BI Desktop and then added in screenshots of the model and some DAX for your reference and put them into easy-to-open PDFs. I can share the BI files if you show interest in my job application, but I do not want to plaster my personal information all over the internet! I did screenshot some SQL to show you that part of many of these models.
 
-**When you open the PDF YOU MIGHT NEED TO CLICK MORE PAGES AT THE BOTTOM TO SEE THE REST**
+**WHEN YOU OPEN THESE PDFs, YOU MIGHT NEED TO CLICK MORE PAGES AT THE BOTTOM TO SEE THE REST. PLEASE DON'T FORGET THAT!**
 
 Enjoy!
 
