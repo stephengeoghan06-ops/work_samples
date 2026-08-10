@@ -3,7 +3,7 @@ I'm Steve from NYC. This is a collection of Power BI Desktop work samples based 
 
 Most of these are based on my own personal stock trading information. One is based on public forest/geographic information, and one is based on fictitious financials I made up, to show a work sample that is Dax/financial information heavy. 
 
-Since many managers and people in HR/recruiters don't have Power BI access and since one cannot get an online Power BI Service account without a business email, I did these on Power BI Desktop and then added in screenshots of the model and some DAX for your reference and put them into easy-to-open PDFs. I can share the BI files if you show interest in my job application, but I do not want to plaster my personal information all over the internet! I did screenshot some SQL to show you that part of many of these models.
+Since many managers and people in HR/Recruiting don't have Power BI access and since one cannot get an online Power BI Service account without a business email, I did these on Power BI Desktop and then added in screenshots of the model and some DAX for your reference and put them into easy-to-open PDFs. I can share the BI files if you show interest in my job application, but I do not want to plaster my personal information all over the internet! I did screenshot some SQL to show you that part of many of these models.
 
 **WHEN YOU OPEN THESE PDFs, YOU MIGHT NEED TO CLICK MORE PAGES AT THE BOTTOM TO SEE THE REST. PLEASE DON'T FORGET THAT!**
 
