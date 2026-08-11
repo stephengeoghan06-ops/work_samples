@@ -7,7 +7,7 @@ Since many managers and people in HR/Recruiting don't have Power BI access and s
 
 **WHEN YOU OPEN THESE PDFs, YOU MIGHT NEED TO CLICK MORE PAGES AT THE BOTTOM TO SEE THE REST. PLEASE DON'T FORGET THAT!**
 
-Enjoy!
+Enjoy! PS I would love to make prettier maps and use more customized visuals and download more template formats, etc., but many features require a business account login, something Microsoft doesn't do with other programs
 
 
 ## 🌐 Socials:
