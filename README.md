@@ -1,15 +1,13 @@
 # 💫 About Me:
-I'm Steve from NYC. This is a collection of Power BI Desktop work samples based on SQL/Excel data I wrote/compiled, to supplement job applications for positions requiring advanced Power-BI skills. I passed the PL-300 exam so am certified by Microsoft in Power BI.
+I'm Steve from NYC. This is a collection of Power BI Desktop work samples based on SQL/Excel data I wrote/compiled, with one more basic R project, to supplement job applications for positions requiring advanced Power-BI skills. 
 
 Most of these are based on my own personal stock trading information. One is based on public forest/geographic information, and one is based on fictitious financials I made up, to show a work sample that is Dax/financial information heavy. 
 
-Since many managers and people in HR/Recruiting don't have Power BI access and since one cannot get an online Power BI Service account without a business email, I did these on Power BI Desktop and then added in screenshots of the model and some DAX for your reference and put them into easy-to-open PDFs. I can share the BI files if you show interest in my job application, but I do not want to plaster my personal information all over the internet! I did screenshot some SQL to show you that part of many of these models.
-
-Also did one more basic R Studio exercise in here...
+Since many managers and people in HR/Recruiting don't have Power BI access and since one cannot get an online Power BI Service account without a business email, I did these on Power BI Desktop, added in screenshots of the model and some DAX for your reference, and put them into easy-to-open PDFs. I can share the BI files if you show interest in my job application.  I did screenshot some SQL to show you that part of many of these models.
 
 **WHEN YOU OPEN THESE PDFs, YOU MIGHT NEED TO CLICK MORE PAGES AT THE BOTTOM TO SEE THE REST. PLEASE DON'T FORGET THAT!**
 
-Enjoy! PS I would love to make prettier maps and use more customized visuals and download more template formats, etc., but many features require a business account login so us laypeople are locked out, something Microsoft doesn't do with other programs
+Enjoy! PSA: I would love to make prettier maps and use more customized visuals and download more template formats, etc. (ex. a flight map or sandkey chart), but many features require a business account login so us laypeople are locked out, something Microsoft doesn't do with other programs
 
 
 ## 🌐 Socials:
