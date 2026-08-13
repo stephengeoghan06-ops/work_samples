@@ -5,9 +5,11 @@ Most of these are based on my own personal stock trading information. One is bas
 
 Since many managers and people in HR/Recruiting don't have Power BI access and since one cannot get an online Power BI Service account without a business email, I did these on Power BI Desktop and then added in screenshots of the model and some DAX for your reference and put them into easy-to-open PDFs. I can share the BI files if you show interest in my job application, but I do not want to plaster my personal information all over the internet! I did screenshot some SQL to show you that part of many of these models.
 
+Also did one more basic R Studio exercise in here...
+
 **WHEN YOU OPEN THESE PDFs, YOU MIGHT NEED TO CLICK MORE PAGES AT THE BOTTOM TO SEE THE REST. PLEASE DON'T FORGET THAT!**
 
-Enjoy! PS I would love to make prettier maps and use more customized visuals and download more template formats, etc., but many features require a business account login, something Microsoft doesn't do with other programs
+Enjoy! PS I would love to make prettier maps and use more customized visuals and download more template formats, etc., but many features require a business account login so us laypeople are locked out, something Microsoft doesn't do with other programs
 
 
 ## 🌐 Socials:
