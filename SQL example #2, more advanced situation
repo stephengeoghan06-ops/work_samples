@@ -1,0 +1,138 @@
+/* this explores if its worth it to take losses while trading, or if you make less money by selling at a loss.  The results
+showed that it made sense to sell losses because there were often more profitable trades the following day that you'd miss
+if your cash was held up in losses*/
+
+
+with morning_move_trades as
+(
+
+Select
+'Morning_move' as Strategy,
+Ticker,
+format(Trading_date,'MM/dd/yyyy') as Trading_date,
+Low_hit,
+Next_high,
+(case when Low_hit < 45 or Ticker = 'TLT' then 1000 when Low_hit < 70 then 500 when Low_hit < 120 then 250 when Low_hit < 200 then 200
+when Low_hit < 300 then 150 when Low_hit < 500 then 100 else 50 end) * Low_hit as Block_Cost,
+
+case when Low_hit < 45 or Ticker = 'TLT' then 1000 when Low_hit < 70 then 500 when Low_hit < 120 then 250 when Low_hit < 200 then 200
+when Low_hit < 300 then 150 when Low_hit < 500 then 100 else 50 end as Block_size,
+
+(Next_high-Low_hit)* (case when Low_hit < 45 or Ticker = 'TLT' then 1000 when Low_hit < 70 then 500 when Low_hit < 120 then 250 when Low_hit < 200 then 200
+when Low_hit < 300 then 150 when Low_hit < 500 then 100 else 50 end) as Potential_Profit,
+Format(cast(First_low_time as datetime),'HH:mm') as when_Trade_started,
+datediff(minute,First_low_time,Next_High_time) as Minutes_to_hold
+
+ 
+ From 
+[dbo].[Daily_morning_move]
+where Ticker <> 'ES'
+)
+
+,
+ 
+
+RSI_profit as (
+select 
+'RSI_Purchases' as Strategy,
+Symbol as Ticker,
+calendarday as Trading_date,
+RSI_Below_20_AMT as Low_hit,
+Next_SPY_High as Next_high,
+(case when RSI_Below_20_AMT < 45 or Symbol = 'TLT' then 1000 when RSI_Below_20_AMT < 70 then 500 when RSI_Below_20_AMT < 120 then 250 when RSI_Below_20_AMT < 200 then 200
+when RSI_Below_20_AMT < 300 then 150 when RSI_Below_20_AMT < 500 then 100 else 50 end) * RSI_Below_20_AMT as Block_Cost,
+
+case when RSI_Below_20_AMT < 45 or Symbol = 'TLT' then 1000 when RSI_Below_20_AMT < 70 then 500 when RSI_Below_20_AMT < 120 then 250 when RSI_Below_20_AMT < 200 then 200
+when RSI_Below_20_AMT < 300 then 150 when RSI_Below_20_AMT < 500 then 100 else 50 end as Block_size,
+
+
+(Next_SPY_High-RSI_Below_20_AMT)* (case when RSI_Below_20_AMT < 45 or Symbol = 'TLT' then 1000 when RSI_Below_20_AMT < 70 then 500 when RSI_Below_20_AMT < 120 then 250 when RSI_Below_20_AMT < 200 then 200
+when RSI_Below_20_AMT < 300 then 150 when RSI_Below_20_AMT < 500 then 100 else 50 end) as Potential_Profit,
+Format(cast(RSI_Below_20_Time as datetime),'HH:mm') as when_Trade_started,
+datediff(minute,RSI_Below_20_Time,Time_next_SPY_High) as Minutes_to_hold
+ from 
+[dbo].[RSI_Lows_Data_Points]
+where RSI_Below_20_Time > '10:00'
+and  Symbol <> 'BLK'
+)
+
+, 
+transactions_lined_up_per_ticker as (
+select 
+* from 
+morning_move_trades
+union all
+select * from RSI_profit)
+
+
+select
+dense_Rank() over (partition by Ticker order by Trading_date,when_Trade_started) as order_of_potential_trade,
+Strategy,
+Ticker,
+Trading_date,
+Low_hit,
+Next_high,
+Block_Cost,
+Block_size,
+when_Trade_started,
+Minutes_to_hold,
+coalesce(case when lag(Ticker) over (partition by Ticker order by Trading_date, when_Trade_started) = Ticker then 
+lag(Potential_Profit) over (partition by Ticker order by Trading_date, when_Trade_started) else null end,0) as Profit_on_Prior_Trade,
+Potential_Profit,
+lead(Next_high) over (partition by Ticker order by Trading_date, when_Trade_started) as TEST_STATISTC,
+ 
+ /*case one: clean case of last trade being profitable and this trade being profitable*/
+case when 
+Next_high > Low_hit
+and lag(Next_high) over (partition by Ticker order by Trading_date, when_Trade_started) >
+lag(Low_hit) over (partition by Ticker order by Trading_date, when_Trade_started)
+/*safegaurd to ensure prior trade aint a loser*/
+Then (Next_high-Low_hit) * 1000
+
+
+
+ /*case three: low hit, went lower, but low hit the next day is lower, but a high comes in the next day. Sell then */
+ When 
+lag(Next_high) over (partition by Ticker order by Trading_date, when_Trade_started) <
+lag(Low_hit) over (partition by Ticker order by Trading_date, when_Trade_started)
+and lag(Low_hit) over (partition by Ticker order by Trading_date, when_Trade_started) > Low_hit
+and lag(Low_hit) over (partition by Ticker order by Trading_date, when_Trade_started) < Next_high
+then ( Next_high - lag(Low_hit) over (partition by Ticker order by Trading_date, when_Trade_started)) * 1000
+
+/* case four: two losses in a row then in the morning of day or trade 3, it goes green*/
+when 
+lag(Next_high,2) over (partition by Ticker order by Trading_date, when_Trade_started) <
+lag(Low_hit,2) over (partition by Ticker order by Trading_date, when_Trade_started)
+and lag(Low_hit,2) over (partition by Ticker order by Trading_date, when_Trade_started) >
+lag(Next_high) over (partition by Ticker order by Trading_date, when_Trade_started)
+and lag(Low_hit,2) over (partition by Ticker order by Trading_date, when_Trade_started) >
+lag(Low_hit) over (partition by Ticker order by Trading_date, when_Trade_started)
+and 
+lag(Low_hit,2) over (partition by Ticker order by Trading_date, when_Trade_started)  <
+Low_hit
+then (Low_hit - lag(Low_hit,2) over (partition by Ticker order by Trading_date, when_Trade_started)) * 1000
+
+ /*case two: low hit, went lower, but low hit the next day is higher. Sort of hypothetical but is meant so we don't overestimate earnings potential*/
+ when 
+lag(Next_high) over (partition by Ticker order by Trading_date, when_Trade_started) <
+lag(Low_hit) over (partition by Ticker order by Trading_date, when_Trade_started)
+and lag(Low_hit) over (partition by Ticker order by Trading_date, when_Trade_started) < Low_hit
+then ( Low_hit - lag(Low_hit) over (partition by Ticker order by Trading_date, when_Trade_started)) * 1000
+
+
+/*case five: two losses in a row, does NOT turn green in morning, but in afternoon peak*/
+when 
+lag(Next_high,2) over (partition by Ticker order by Trading_date, when_Trade_started) <
+lag(Low_hit,2) over (partition by Ticker order by Trading_date, when_Trade_started)
+and lag(Low_hit,2) over (partition by Ticker order by Trading_date, when_Trade_started) <
+lag(Next_high) over (partition by Ticker order by Trading_date, when_Trade_started)
+and lag(Low_hit,2) over (partition by Ticker order by Trading_date, when_Trade_started) <
+lag(Low_hit) over (partition by Ticker order by Trading_date, when_Trade_started)
+and lag(Next_high) over (partition by Ticker order by Trading_date, when_Trade_started) <
+lag(Low_hit) over (partition by Ticker order by Trading_date, when_Trade_started)
+and 
+lag(Next_high,2) over (partition by Ticker order by Trading_date, when_Trade_started)  >
+Low_hit
+and lag(Next_high,2) over (partition by Ticker order by Trading_date, when_Trade_started) < Next_high
+then (Next_high - lag(Low_hit,2) over (partition by Ticker order by Trading_date, when_Trade_started)) * 1000
+
