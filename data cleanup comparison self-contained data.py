@@ -1,0 +1,112 @@
+import pandas as pd
+
+My_background_data = [
+['09:30','776.24','10/09/2026'],
+['10:00','775.63','10/09/2026'],
+['10:30','776.42','10/09/2026'],
+['11:00','777.39','10/09/2026'],
+['14:00','779.22','10/09/2026'],
+['16:00','778.57','10/09/2026'],
+['09:30','774.9','10/08/2026'],
+['10:00','775.3','10/08/2026'],
+['10:30','776','10/08/2026'],
+['11:00','775.32','10/08/2026'],
+['14:00','774.5','10/08/2026'],
+['16:00','773.96','10/08/2026'],
+['09:30','775.59','10/07/2026'],
+['10:00','774.8','10/07/2026'],
+['10:30','774.43','10/07/2026'],
+['11:00','773.9','10/07/2026'],
+['14:00','777.6','10/07/2026'],
+['16:00','777.22','10/07/2026'],
+['09:30','770.57','10/02/2026'],
+['10:00','770.56','10/02/2026'],
+['10:30','772.32','10/02/2026'],
+['11:00','769.5','10/02/2026'],
+['14:00','772.43','10/02/2026'],
+['16:00','769.64','10/02/2026'],
+['09:30','770','10/05/2026'],
+['10:00','770.56','10/05/2026'],
+['10:30','772.7','10/05/2026'],
+['11:00','772.8','10/05/2026'],
+['14:00','776.26','10/05/2026'],
+['16:00','774.83','10/05/2026'],
+['09:30','778.62','10/06/2026'],
+['10:00','780','10/06/2026'],
+['10:30','778.73','10/06/2026'],
+['11:00','781.24','10/06/2026'],
+['14:00','781.43','10/06/2026'],
+['16:00','779.14','10/06/2026'],
+['09:30','764.32','10/01/2026'],
+['10:00','762.56','10/01/2026'],
+['10:30','760.42','10/01/2026'],
+['11:00','760.41','10/01/2026'],
+['14:00','765','10/01/2026'],
+['16:00','764.05','10/01/2026'],
+['09:30','766.5','09/30/2026'],
+['10:00','768','09/30/2026'],
+['10:30','767.9','09/30/2026'],
+['11:00','768.55','09/30/2026'],
+['14:00','769.21','09/30/2026'],
+['16:00','763.03','09/30/2026'],
+['09:30','766.85','09/29/2026'],
+['10:00','764.68','09/29/2026'],
+['10:30','765.3','09/29/2026'],
+['11:00','764.88','09/29/2026'],
+['14:00','765.5','09/29/2026'],
+['16:00','764.2','09/29/2026'],
+['09:30','768.38','09/28/2026'],
+['10:00','768.35','09/28/2026'],
+['10:30','767.33','09/28/2026'],
+['11:00','764.16','09/28/2026'],
+['14:00','769.49','09/28/2026'],
+['16:00','765.55','09/28/2026']]
+#turn the above into a dataframe with headers
+SPY_daily_movement = pd.DataFrame(My_background_data,columns=['Time_Stamp','Amount','Trading_Day'])
+#let's make these numeric:
+SPY_daily_movement['Amount'] = SPY_daily_movement['Amount'].astype(float)
+#let's pick morning rows only, copy() since the below is going to try to add a column into a view
+SPY_morning_moves = SPY_daily_movement[SPY_daily_movement['Time_Stamp']<"12:00"].copy()
+#find the low amount for each morning
+SPY_morning_moves['Morning_Low'] = SPY_morning_moves.groupby('Trading_Day')['Amount'].transform('min')
+#since that doesn't include time stamp, we need to do the below to pull it back in
+morning_low_row = SPY_morning_moves[SPY_morning_moves['Amount'] == SPY_morning_moves['Morning_Low']]
+#after we've tied to low amount to a specific row
+morning_low_rows = morning_low_row[['Trading_Day','Time_Stamp','Amount']].rename(columns={'Time_Stamp':'Time_of_low','Amount':'Low_amount'})
+
+#now doing same math for the max per afternoon:
+SPY_afternoon_moves = SPY_daily_movement[SPY_daily_movement['Time_Stamp']>"12:00"].copy()
+SPY_afternoon_moves['Afternoon_High'] = SPY_afternoon_moves.groupby('Trading_Day')['Amount'].transform('max')
+afternoon_high_row = SPY_afternoon_moves[SPY_afternoon_moves['Amount'] == SPY_afternoon_moves['Afternoon_High']]
+afternoon_high_rows = afternoon_high_row[['Trading_Day','Time_Stamp','Amount']].rename(columns=
+    {'Time_Stamp':'Time_of_High','Amount':'High_Amount'})
+
+Data_All_Combined =morning_low_rows.merge(afternoon_high_rows[['Trading_Day','Time_of_High','High_Amount']],on='Trading_Day',
+                                        how='left')
+
+Data_All_Combined = pd.DataFrame(Data_All_Combined,columns=['Trading_Day','Time_of_low','Low_amount','Time_of_High','High_Amount'])
+
+Data_All_Combined['Low_to_High'] = Data_All_Combined['High_Amount'] - Data_All_Combined['Low_amount']
+
+Data_All_Combined['Gain_per_option'] = Data_All_Combined['Low_to_High'] * 0.55 * 100
+
+# print(Data_All_Combined)
+
+def number_of_call_options():
+    while True:
+        Num_options = int(input("Enter how many call options you'd like to buy between 1 and 5: "))
+        if 1 <= Num_options  <=5:
+            print(f"{Num_options} is fine")
+            return Num_options
+        elif Num_options <= 0:
+            print(f"{Num_options} is negative, try again!")
+        else:
+            print(f"{Num_options} is too much risk, try again!")
+
+
+chosen_amount = number_of_call_options()
+
+Data_All_Combined['Total_gain_loss'] = Data_All_Combined['Gain_per_option'] * chosen_amount
+Avg_Gain_loss = (Data_All_Combined['Total_gain_loss']).mean()
+print(f"Average earnings per day could max out at ${Avg_Gain_loss:.2f}")
+#number_of_call_options()
