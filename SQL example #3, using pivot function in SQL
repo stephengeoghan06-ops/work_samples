@@ -1,0 +1,393 @@
+/* Yes you can "pivot" with group by, but this one uses the actual Pivot function in SQL*/
+
+declare @qtyofcalls int = 1
+declare @costofcalls int = 1500
+
+
+
+
+select
+calendar_month,
+isnull([Low Risk no Day],0) as [Low Risk no Day],
+isnull([Medium Risk],0) as [Medium Risk],
+isnull([High Risk News Day],0) as [High Risk News Day]
+
+
+from
+
+/*start of data to pivot, this big query grouped it all*/
+
+(
+select
+
+calendar_month,
+sum(Buy_call_at_10_sell_peak) as 'buy_calls_at_10_profit',
+Risk_Level_News_Day
+
+
+
+
+ from(
+Select
+date_order,
+Trading_Day,
+format(Trading_Day,'MM/yyyy') as 'calendar_month',
+Risk_Level_News_Day,
+Futures_for_today,
+Max_Pain,
+Day_of_Week,
+How_down_up_is_open,
+prior_close,
+Move_as_of_930,
+Pct_down_at_930,
+Open_timestamp,
+TIMESTAMP_940,
+Move_as_of_1000,
+Pct_move_down_by_1000,
+TimeSTAMP_1000,
+TimeSTAMP_1030,
+TimeSTAMP_1100,
+when_is_morning_low,
+Afternoon_dip,
+Afternoon_Dip_time,
+Pre_close_dip_amount,
+Pre_close_dip_time,
+Pre_close_rally_amount,
+Pre_close_rally_time,
+ClosingPrice,
+Daychange,
+Open_vs_close,
+Pct_day_Change,
+Up_or_Down_Day,
+_Close_above_below_10AM,
+Daily_Low,
+Low_Time,
+Daily_High_outside_close_or_open,
+High_timing,
+Price_change_10AM_to_close,
+Price_change_10AM_to_peak,
+When_was_high,
+Buy_call_at_close_sell_next_day,
+Buy_call_at_Open_sell_Close,
+Buy_call_at_940_sell_Close,
+Buy_call_at_10_sell_peak,
+/* Additional strat = if day is negative by more than $200, then sell at close, if that is also negative, sell at open next day*/
+case when  Buy_call_at_10_sell_peak >= -200 then Buy_call_at_10_sell_peak
+else
+Convert(decimal(10,2),( lag(Open_timestamp) over (order by Trading_Day desc ) -TimeSTAMP_1000)* (@qtyofcalls * 100 * 0.55))
+end as 'Buy_call_at_10_sell_peak_Or_next_morning',
+
+
+Buy_call_at_1030_sell_peak,
+Buy_call_at_10_sell_ASAP_or_11,
+Buy_call_at_10_sell_11,
+Intra_trade_low,
+minutes_to_hold_trade,
+Max_drawdown_while_holding_trade,
+Buy_calls_at_10_and_11_sell_peak,
+Buy_calls_at_11_sell_peak,
+Buy_call_at_10_sell_Close,
+Buy_calls_at_10_and_11_sell_close,
+Pre_close_dip_strat,
+max_profit,
+buy_Morning_low_sell_close,
+buy_daily_low_sell_close,
+estimated_max_loss,
+Risk_adverse_strat_Sell_11_if_down,
+Risk_adverse_strat_hold_til_close_if_down_at_11,
+/*running total sometimes have a sum() over (partition by _ order by _) if you have multiple running balances by, let's say, customer*/
+sum(Buy_call_at_10_sell_peak) over ( order by Trading_Day) as 'Potential_Running_balance'
+,
+DAILY_VWAP_Est,
+VWAP,
+case when High_timing < Low_Time and Expected_Daily_Move_High < Daily_High_outside_close_or_open
+then (Expected_Daily_Move_High-Daily_Low)*0.7*0.55*100 
+
+else null end as 'One_PUT_Strategy',
+Expected_Daily_Move_High,
+Expected_Daily_Move_Low,
+
+Convert(decimal(10,2),(Pre_close_rally_amount-Pre_close_dip_amount)  * (@qtyofcalls *100 * 0.55)) as 'Playing_very_EOD_rally',
+
+
+Comments
+
+
+from
+
+
+ 
+
+(
+
+
+select distinct
+/* excluding week of 4/7 - 4/11 that was the huge up and down moves: tariffs/pauses then realizing the pauses weren't really pauses*/
+
+Rank () over ( order by SPY_DAILY_INFO.Trading_Day) as 'date_order',
+SPY_DAILY_INFO.Trading_Day,
+[dbo].[Daily_Notes].[Risk_Level/News Day?] as 'Risk_Level_News_Day',
+Futures_for_today,
+Max_Pain,
+Day_of_Week,
+SPY_DAILY_INFO.Open_timestamp - lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day) as 'How_down_up_is_open',
+lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day) as prior_close,
+SPY_DAILY_INFO.Open_timestamp - lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day)  as 'Move_as_of_930',
+format((SPY_DAILY_INFO.Open_timestamp - lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day))/lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day),'P03')  as 'Pct_down_at_930',
+
+format(case when (ClosingPrice - lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day)) is null then 0
+else ((ClosingPrice - lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day))/lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day))
+end,'P03') as 'Pct_day_Change',
+
+
+
+/*PERCENT MOVE DONE BY THIS TIME FORMULAS*/
+/*when its an up day.*/
+/*and starts higher*/
+ format(Case when ( ClosingPrice > lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day)) and (SPY_DAILY_INFO.Open_timestamp >  lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day)) then
+  least( 1,(SPY_DAILY_INFO.Open_timestamp - lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day)) / (ClosingPrice - lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day)) )
+
+  /*but starts down*/
+ when ( ClosingPrice > lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day)) and (SPY_DAILY_INFO.Open_timestamp <  lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day)) then 0
+ 
+ /*when its a down day..... */
+   /*and opens lower but full day move is not done yet*/
+ when ( ClosingPrice < lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day)) and (SPY_DAILY_INFO.Open_timestamp <  lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day))
+  and (lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day) - SPY_DAILY_INFO.Open_timestamp) < (lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day) - SPY_DAILY_INFO.ClosingPrice )
+ 
+ then
+abs((SPY_DAILY_INFO.Open_timestamp - lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day))/ (lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day)-ClosingPrice))
+
+
+ /*when its a down day..... */
+   /*and opens lower AND full day move is done */
+ when ( ClosingPrice < lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day)) and (SPY_DAILY_INFO.Open_timestamp <  lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day)
+ and (lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day) - SPY_DAILY_INFO.Open_timestamp) > (lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day) - SPY_DAILY_INFO.ClosingPrice)
+ ) then 1
+/*abs((lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day) - SPY_DAILY_INFO.Open_timestamp) / (ClosingPrice - lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day)))*/
+
+   /*but opens higher*/  
+ when ( ClosingPrice < lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day)) and (SPY_DAILY_INFO.Open_timestamp >  lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day)) then  0
+ 
+ /*Add another condition: when smaller-timeframe move is greater than day move...*/
+ else 0.00 end ,'P03')
+ as 'Pct_move_down_by_930',
+
+SPY_DAILY_INFO.Open_timestamp,
+SPY_DAILY_INFO.TIMESTAMP_940,
+
+SPY_DAILY_INFO.TimeSTAMP_1000 - lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day)  as 'Move_as_of_1000',
+
+
+
+
+/*PERCENT MOVE DONE BY THIS TIME FORMULAS*/
+/*when its an up day.*/
+/*and starts higher*/
+ format(Case when ( ClosingPrice > lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day)) and (SPY_DAILY_INFO.TimeSTAMP_1000 >  lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day)) then
+  least( 1,(SPY_DAILY_INFO.TimeSTAMP_1000 - lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day)) / (ClosingPrice - lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day)) )
+
+  /*but starts down*/
+ when ( ClosingPrice > lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day)) and (SPY_DAILY_INFO.TimeSTAMP_1000 <  lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day)) then 0
+ 
+ /*when its a down day..... */
+   /*and opens lower but full day move is not done yet*/
+ when ( ClosingPrice < lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day)) and (SPY_DAILY_INFO.TimeSTAMP_1000 <  lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day))
+  and (lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day) - SPY_DAILY_INFO.TimeSTAMP_1000) < (lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day) - SPY_DAILY_INFO.ClosingPrice )
+ 
+ then
+abs((SPY_DAILY_INFO.TimeSTAMP_1000 - lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day))/ (lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day)-ClosingPrice))
+
+
+ /*when its a down day..... */
+   /*and opens lower AND full day move is done */
+ when ( ClosingPrice < lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day)) and (SPY_DAILY_INFO.TimeSTAMP_1000 <  lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day)
+ and (lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day) - SPY_DAILY_INFO.TimeSTAMP_1000) > (lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day) - SPY_DAILY_INFO.ClosingPrice)
+ ) then 1
+/*abs((lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day) - SPY_DAILY_INFO.Open_timestamp) / (ClosingPrice - lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day)))*/
+
+   /*but opens higher*/  
+ when ( ClosingPrice < lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day)) and (SPY_DAILY_INFO.TimeSTAMP_1000 >  lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day)) then  0
+ 
+ /*Add another condition: when smaller-timeframe move is greater than day move...*/
+ else 0.00 end ,'P03')
+ as 'Pct_move_down_by_1000',
+
+
+SPY_DAILY_INFO.TimeSTAMP_1000,
+SPY_DAILY_INFO.TimeSTAMP_1030,
+SPY_DAILY_INFO.TimeSTAMP_1100,
+whenwasmorninglow.when_is_morning_low,
+
+
+Afternoon_dip,
+convert(varchar(5),Afternoon_Dip_time,108) as 'Afternoon_Dip_time',
+Pre_close_dip_amount,
+convert(varchar(5),Pre_close_dip_time,108) as 'Pre_close_dip_time',
+Pre_close_rally_amount,
+convert(varchar(5),Pre_close_rally_time,108) as 'Pre_close_rally_time',
+ClosingPrice,
+case when (ClosingPrice - lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day)) is null then 0
+else (ClosingPrice - lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day))
+  end as 'Daychange',
+
+  (ClosingPrice -SPY_DAILY_INFO.Open_timestamp) as 'Open_vs_close',
+
+
+
+case when  (ClosingPrice - lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day)) is null then 'Flat'
+ when  (ClosingPrice - lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day)) = 0 then 'Flat' 
+ when ClosingPrice > lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day) then 'closed up'
+ when ClosingPrice < lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day) then 'closed down'
+ else 'check math'
+ end as 'Up_or_Down_Day',
+
+ case when  ClosingPrice < SPY_DAILY_INFO.TimeSTAMP_1000  then 'Down from 10:00'
+ when ClosingPrice = SPY_DAILY_INFO.TimeSTAMP_1000 then  'close flat to 10:00'
+ when ClosingPrice > SPY_DAILY_INFO.TimeSTAMP_1000 then 'up from 10:00'
+ else 'weird/check?!'
+ end as '_Close_above_below_10AM',
+
+Daily_Low,
+convert(varchar(5),Low_Time,108) as 'Low_Time',
+Daily_High_outside_close_or_open,
+convert(varchar(5),High_timing,108) as 'High_timing',
+ClosingPrice - SPY_DAILY_INFO.TimeSTAMP_1000 as 'Price_change_10AM_to_close',
+
+(case when  High_timing < '10:30' then ClosingPrice else Daily_High_outside_close_or_open end )
+-SPY_DAILY_INFO.TimeSTAMP_1000  as 'Price_change_10AM_to_peak',
+
+ case when High_timing < '10:30' then 'early in day' else 'afternoon/later' end as 'When_was_high', 
+
+ Convert(decimal(10,2),(SPY_DAILY_INFO.Open_timestamp - lag(ClosingPrice) over (order by SPY_DAILY_INFO.trading_day))*(@qtyofcalls *100 * 0.55)) as 'Buy_call_at_close_sell_next_day',
+ Convert(decimal(10,2),(ClosingPrice -SPY_DAILY_INFO.Open_timestamp) * (@qtyofcalls *100 * 0.55)) as 'Buy_call_at_Open_sell_Close',
+
+  Convert(decimal(10,2),(ClosingPrice -SPY_DAILY_INFO.TIMESTAMP_940) * (@qtyofcalls *100 * 0.55)) as 'Buy_call_at_940_sell_Close',
+
+  /*factoring down "sell at peak" ones since it's highly unlikely I can correctly time a peak*/
+Convert(decimal(10,2),((case when  High_timing < '10:40' then ClosingPrice else Daily_High_outside_close_or_open end )
+-SPY_DAILY_INFO.TimeSTAMP_1000)* (@qtyofcalls * 100 * 0.55) * 0.70) as 'Buy_call_at_10_sell_peak',
+
+Convert(decimal(10,2),((case when  High_timing < '10:40' then ClosingPrice else Daily_High_outside_close_or_open end )
+-SPY_DAILY_INFO.TimeSTAMP_1030)* (@qtyofcalls * 100 * 0.55) * 0.70) as 'Buy_call_at_1030_sell_peak',
+
+
+Convert(decimal(10,2),((case when  High_timing < '10:05' then greatest(SPY_DAILY_INFO.TimeSTAMP_1100,SPY_DAILY_INFO.TimeSTAMP_1030)
+when High_timing > '10:05' and High_timing < '11:00' then Daily_High_outside_close_or_open
+
+else SPY_DAILY_INFO.TimeSTAMP_1100 end )
+-SPY_DAILY_INFO.TimeSTAMP_1000)* (@qtyofcalls * 100 * 0.55) * 0.70) as 'Buy_call_at_10_sell_ASAP_or_11',
+
+Convert(decimal(10,2),(SPY_DAILY_INFO.TimeSTAMP_1100 - SPY_DAILY_INFO.TimeSTAMP_1000 )* (@qtyofcalls * 100 * 0.55)) as 'Buy_call_at_10_sell_11',
+
+SPY_DAILY_INFO.Intra_trade_low ,
+case when  datediff(minute,'10:00',High_timing) < 0 then  datediff(minute,High_timing,'16:00')       
+else     datediff(minute,'10:00',High_timing)      end
+as 'minutes_to_hold_trade',
+
+case when (SPY_DAILY_INFO.Intra_trade_low - SPY_DAILY_INFO.TimeSTAMP_1000 >= 0 and High_timing < '11:00') then 0 
+when (SPY_DAILY_INFO.Intra_trade_low - SPY_DAILY_INFO.TimeSTAMP_1000 >= 0 and High_timing >= '11:00') then 
+Convert(decimal(10,2),((SPY_DAILY_INFO.TimeSTAMP_1100 - SPY_DAILY_INFO.TimeSTAMP_1000) * (@qtyofcalls * 100 * 0.55) * 0.70))
+else Convert(decimal(10,2),((SPY_DAILY_INFO.Intra_trade_low - SPY_DAILY_INFO.TimeSTAMP_1000) * (@qtyofcalls * 100 * 0.55) * 0.70)) end as 'Max_drawdown_while_holding_trade',
+
+Convert(decimal(10,2),((case when  High_timing < '10:40' then ClosingPrice else Daily_High_outside_close_or_open end )
+-((SPY_DAILY_INFO.TimeSTAMP_1000+SPY_DAILY_INFO.TimeSTAMP_1100)/2))  * (@qtyofcalls * 100 * 0.55) *0.70) as 'Buy_calls_at_10_and_11_sell_peak',
+
+Convert(decimal(10,2),((case when  High_timing < '11:10' then ClosingPrice else Daily_High_outside_close_or_open end )
+-SPY_DAILY_INFO.TimeSTAMP_1100)  * (@qtyofcalls * 100 * 0.55) *0.70) as 'Buy_calls_at_11_sell_peak',
+
+
+Convert(decimal(10,2),(ClosingPrice -SPY_DAILY_INFO.TimeSTAMP_1000) * (@qtyofcalls *100 * 0.55)) as 'Buy_call_at_10_sell_Close',
+Convert(decimal(10,2),(ClosingPrice-((SPY_DAILY_INFO.TimeSTAMP_1000+SPY_DAILY_INFO.TimeSTAMP_1100)/2))* (@qtyofcalls * 100 * 0.55))
+as 'Buy_calls_at_10_and_11_sell_close',
+
+Convert(decimal(10,2),case when Pre_close_dip_amount = 0 then 0 else ((Pre_close_rally_amount - Pre_close_dip_amount) * (@qtyofcalls *100 * 0.55)) end )as 'Pre_close_dip_strat',
+
+
+
+Convert(decimal(10,2),(Daily_High_outside_close_or_open - (case when whenwasmorninglow.when_is_morning_low = 'Low at OPEN' then SPY_DAILY_INFO.Open_timestamp
+when whenwasmorninglow.when_is_morning_low = 'low_at_10:00' then SPY_DAILY_INFO.TimeSTAMP_1000
+when whenwasmorninglow.when_is_morning_low = 'low_at_10:30' then SPY_DAILY_INFO.TimeSTAMP_1030
+when whenwasmorninglow.when_is_morning_low = 'low_at_11:00' then SPY_DAILY_INFO.TimeSTAMP_1100 end ))* (@qtyofcalls * 100 * 0.55))
+as 'max_profit' ,
+
+Convert(decimal(10,2),(Closingprice - (case when whenwasmorninglow.when_is_morning_low = 'Low at OPEN' then SPY_DAILY_INFO.Open_timestamp
+when whenwasmorninglow.when_is_morning_low = 'low_at_10:00' then SPY_DAILY_INFO.TimeSTAMP_1000
+when whenwasmorninglow.when_is_morning_low = 'low_at_10:30' then SPY_DAILY_INFO.TimeSTAMP_1030
+when whenwasmorninglow.when_is_morning_low = 'low_at_11:00' then SPY_DAILY_INFO.TimeSTAMP_1100 end ))* (@qtyofcalls * 100 * 0.55))
+as 'buy_Morning_low_sell_close',
+
+
+Convert(decimal(10,2),(Closingprice - Daily_Low  )* (@qtyofcalls * 100 * 0.55))
+as 'buy_daily_low_sell_close',
+
+
+
+Convert(decimal(10,2), (Closingprice - Daily_High_outside_close_or_open) * (@qtyofcalls * 100 * 0.55))  as 'estimated_max_loss',
+
+
+/* Risk aversion - fear of loss strategy.  If I buy 10AM and it keeps going down, what do I do. Sell at 11AM or hold? Does it make a difference over time?*/
+
+/*if sell at 11AM*/
+case when SPY_DAILY_INFO.TimeSTAMP_1100 < SPY_DAILY_INFO.TimeSTAMP_1000 then 
+Convert(decimal(10,2),(SPY_DAILY_INFO.TimeSTAMP_1100 - SPY_DAILY_INFO.TimeSTAMP_1000)* (@qtyofcalls * 100 * 0.55))
+else Convert(decimal(10,2),((case when  High_timing < '10:40' then ClosingPrice else Daily_High_outside_close_or_open end )
+-SPY_DAILY_INFO.TimeSTAMP_1000)* (@qtyofcalls * 100 * 0.55) * 0.70) 
+end as 'Risk_adverse_strat_Sell_11_if_down',
+
+
+/*if gold to close*/
+case when SPY_DAILY_INFO.TimeSTAMP_1100 < SPY_DAILY_INFO.TimeSTAMP_1000 then 
+Convert(decimal(10,2),(SPY_DAILY_INFO.ClosingPrice - SPY_DAILY_INFO.TimeSTAMP_1000)* (@qtyofcalls * 100 * 0.55))
+else Convert(decimal(10,2),((case when  High_timing < '10:40' then ClosingPrice else Daily_High_outside_close_or_open end )
+-SPY_DAILY_INFO.TimeSTAMP_1000)* (@qtyofcalls * 100 * 0.55) * 0.70) 
+end as 'Risk_adverse_strat_hold_til_close_if_down_at_11',
+
+/*running total code*/
+
+DAILY_VWAP_Est,
+VWAP,
+Expected_Daily_Move_Low,
+Expected_Daily_Move_High,
+[dbo].[Daily_Notes].Comments
+
+from [dbo].[SPY_DAILY_INFO]
+left join [dbo].[Daily_Notes] on [dbo].[Daily_Notes].Calendarday = [dbo].[SPY_DAILY_INFO].Trading_Day
+
+left join 
+
+/*to pull in when morning low was*/
+(select   
+Trading_Day,
+Open_timestamp,
+TIMESTAMP_940,
+TimeSTAMP_1000,
+TimeSTAMP_1030,
+TimeSTAMP_1100,
+Intra_trade_low,
+case when  least(TimeSTAMP_1000,TimeSTAMP_1030,TimeSTAMP_1100) = TimeSTAMP_1000  Then 'low_at_10:00'
+when  least(TimeSTAMP_1000,TimeSTAMP_1030,TimeSTAMP_1100) = TimeSTAMP_1030  Then 'low_at_10:30'
+when  least(TimeSTAMP_1000,TimeSTAMP_1030,TimeSTAMP_1100) = TimeSTAMP_1100  Then 'low_at_11:00'
+
+else 'check data'
+end as 'when_is_morning_low'
+from [dbo].[SPY_DAILY_INFO] 
+) whenwasmorninglow     on  whenwasmorninglow.Trading_Day  = [dbo].[SPY_DAILY_INFO].Trading_Day
+
+where SPY_DAILY_INFO.Trading_Day > '4/14/2025' or SPY_DAILY_INFO.Trading_Day < '4/4/2025'
+
+/*where  SPY_DAILY_INFO.Trading_Day < '2025-04-07' or  SPY_DAILY_INFO.Trading_Day > '2025-04-11'*/
+
+
+) test)bigtabletosum
+
+group by 
+calendar_month,
+Risk_Level_News_Day )    datagroupedtothenpivot 
+
+
+Pivot
+(
+sum (buy_calls_at_10_profit)
+for Risk_Level_News_Day in ([Low Risk no Day],[Medium Risk],[High Risk News Day]) 
+)as pvt
