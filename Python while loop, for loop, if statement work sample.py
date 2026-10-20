@@ -1,0 +1,122 @@
+#import pandas as pd
+#from numpy.ma.core import not_equal
+
+#The purpose of this code is to experiment with/show For Loops and a While Loop with
+#break, continue, and if/elif statements, to show how a (decision making) process can be automated
+#in this example, we have a set list of stocks we can buy
+#You pick the stock, enter the QTY, then it calculates the income
+#You can't spend > $200K
+#There is an assumption you're earning 2.5% on the cash (i.e. starting place of $5K on the $200K,
+# so if you only buy low income dividend stocks, your income will be < $5000, or vice versa
+#This is also a working draft but I will be adding features, namely, more options to ask questions at the end
+
+stock_price_info = {
+'PG':{'price':159,'Dividend': 4.36},
+'DUK':{'price':121.40,'Dividend': 4.34},
+'STAG':{'price':36,'Dividend': 1.56},
+'SO':{'price':91,'Dividend': 3.04},
+'MCD':{'price':242.52,'Dividend': 7.72},
+'HD':{'price':309.11,'Dividend': 9.32},
+'ORI':{'price':39.66,'Dividend': 1.24},
+'ALL':{'price':247.48,'Dividend': 4.32},
+'VZ':{'price':44.65,'Dividend': 2.84},
+'ES':{'price':66.24,'Dividend': 3.16},
+}
+#to add in dividend yield:
+for ticker, datainfo in stock_price_info.items():
+    if datainfo['price'] > 0:
+        datainfo['dividend_yield'] = round((datainfo['Dividend'] / datainfo['price']),4)
+
+
+Starting_Stock_balance = 0
+Starting_Cash = 200000
+Starting_income = 5000 #hypothegtical 2.5% CD
+Final_Income = Starting_income
+Cash_Balance_left = Starting_Cash
+List_of_tickers = set(stock_price_info.keys())
+Tickers_Purchased = {}
+
+print(f"You have ${Cash_Balance_left:.2f} to buy: {List_of_tickers}")
+print("Type Done when you are DONE, otherwise you might be told when you are done")
+
+while True:
+    stock_selection = input("Pick a stock or say Done:    ").strip().upper()
+    if stock_selection not in List_of_tickers  and stock_selection != 'DONE':
+        print("you can't actually buy that")
+    if stock_selection in Tickers_Purchased:
+        print("You already bought that stock")
+        continue
+    if stock_selection == 'DONE':
+        #new-to-me formulation here. tried a for loop but it didn't work.
+        #this is a good way to iterate through a tiple to fit specific format/print requirements though:
+        what_you_bought = [f"{ticker}: {shares} shares (${cost:.2f})"
+                           for ticker, (shares, cost) in Tickers_Purchased.items()]
+        print(f"You bought: {','.join(what_you_bought)}")
+        print(f"The Stock Portion of your portfolio is: ${Starting_Stock_balance:.2f}")
+        print(f"You have ${Cash_Balance_left:.2f} to buy: {List_of_tickers}")
+        print(f"Your final income is: ${Final_Income:.2f}")
+        End_or_keep_going = input("Do you have any other questions, YES or NO?:  ").upper().strip()
+        if End_or_keep_going == "NO":
+            print("awesome, enjoy your dividends")
+            break
+        else:
+            print("Do you want to see the portfolio, or info for an individual stock?")
+            follow_up_questions = input("Options: A) Lot_size per ticker or B) Income per ticker. Type A or B:  ")
+            if follow_up_questions == "A":
+                # this sort of untuples the pairs of data in Tickers_Purchased.
+                for ticker, (shares,cost) in Tickers_Purchased.items():
+                    #note-to-self, Python recommended some lines like the below, so I neither
+                    #came up with them on my own, nor used AI :-/
+                    print(f"Stock: {ticker}| Cost: ${cost:.2f}")
+            elif follow_up_questions == "B":
+                #this sort of untuples the pairs of data in Tickers_Purchased.
+                for ticker, (shares,cost) in Tickers_Purchased.items():
+                    price = stock_price_info[ticker]['price']
+                    div_per_share = stock_price_info[ticker]['Dividend']
+                    num_shares = cost/price
+                    Div_income = num_shares * div_per_share
+                    print(f"Stock: {ticker}  | Income: ${Div_income:.2f}")
+                else:
+                    print("incorrect selection")
+                    continue
+            break
+    elif stock_selection in List_of_tickers:
+        try:
+            shares_to_get = int(input("How many shares do you want?: "))
+            lot_size = int(shares_to_get)
+
+        #need an error message here
+        except ValueError:
+            print("You didn't enter a number")
+            #without the continue below it would error out after the except and either way, not recognize the Lot_cost below
+            continue
+        Lot_cost = lot_size * stock_price_info[stock_selection]['price']
+
+
+        #keep this wrapped in "int" or else Python doesn't know the quantity is a # and the math errors out:
+        if (Cash_Balance_left - Lot_cost) >= 0:
+            #take the stock from the available list and put it in the purchase list with the lot cost:
+            Tickers_Purchased[stock_selection] = (lot_size,Lot_cost)
+            List_of_tickers.remove(stock_selection)
+            #calculate dividend for that lot
+            Dividend_Income = lot_size * stock_price_info[stock_selection]['Dividend']
+            #we had each purchase to the stock balance:
+            Starting_Stock_balance += Lot_cost
+            stock_price_info[stock_selection]['shares'] = lot_size
+            Cash_Balance_left = Starting_Cash - Starting_Stock_balance
+            #we're going to calculate the return on the cash left and then dividends, one by one and add them up into
+            #final income
+            Remaining_Cash_Income = Cash_Balance_left * 0.025
+            #I did get help with the below formulation. Apparently it is the same as a for loop, so I wanted to keep it
+            # as a model for how to formulate things in the future. Prior to this,
+            #the code was only calculating the most recent dividend and not then adding them up one by one.
+            Total_Stock_Dividend = sum(
+                stock_price_info[t]['shares'] * stock_price_info[t]['Dividend'] for t in Tickers_Purchased)
+            Final_Income = Remaining_Cash_Income + Total_Stock_Dividend
+            print(f"you have ${Cash_Balance_left:.2f} to buy: {List_of_tickers}")
+            # append doesn't work on #s, only on text. So it's append here, += when it's $ amounts below
+
+
+        else:
+            print(f"You have ${Cash_Balance_left:.2f} to freely spend so last transaction didn't work")
+
